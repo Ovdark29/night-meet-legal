@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Night Meet — Adresse confirmée</title>
+<!--
+  Page d'arrivée du lien de confirmation d'inscription (2026-08-10).
+
+  POURQUOI ELLE EXISTE. Le lien envoyé par email doit bien mener quelque part.
+  Sans « Site URL » configurée, Supabase renvoyait vers une adresse par défaut
+  et l'utilisateur tombait sur « Ce site est inaccessible » — juste après avoir
+  fait ce qu'on lui demandait. Le compte était pourtant confirmé : l'échec était
+  purement de présentation, mais il donnait à croire le contraire.
+
+  Volontairement statique et sans dépendance : elle doit s'afficher instantanément,
+  y compris depuis le navigateur intégré d'une application de messagerie et sur un
+  réseau mobile faible.
+-->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: #0a0a1a; color: #f0f0ff;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 28px;
+  }
+  .carte { max-width: 460px; text-align: center; }
+  .lune {
+    width: 74px; height: 74px; border-radius: 50%; margin: 0 auto 26px;
+    background: radial-gradient(circle at 35% 35%, #e9d5ff, #a855f7);
+    box-shadow: 0 0 42px rgba(168,85,247,.45);
+  }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: 1.9rem; margin: 0 0 14px; line-height: 1.25; }
+  p { color: rgba(240,240,255,.82); font-size: 1rem; line-height: 1.6; margin: 0 0 14px; }
+  .discret { color: rgba(240,240,255,.5); font-size: .85rem; margin-top: 30px; }
+  a { color: #c4b5fd; }
+</style>
+</head>
+<body>
+  <div class="carte">
+    <div class="lune"></div>
+    <h1>Ton adresse est confirmée.</h1>
+    <p>Tu peux fermer cette page et retourner dans Night&nbsp;Meet pour te connecter.</p>
+    <p class="discret">
+      Un souci&nbsp;? Écris-nous à <a href="mailto:b.chatel@coreai.support">b.chatel@coreai.support</a>.
+    </p>
+  </div>
+</body>
+</html>
