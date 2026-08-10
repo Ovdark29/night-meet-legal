@@ -47,5 +47,26 @@
       Un souci&nbsp;? Écris-nous à <a href="mailto:b.chatel@coreai.support">b.chatel@coreai.support</a>.
     </p>
   </div>
+
+<script>
+  /*
+   * 🔀 2026-08-10 — AIGUILLAGE. Tous les liens d’authentification arrivent ici,
+   * parce que c’est la « Site URL » du projet. Or une réinitialisation de mot de
+   * passe n’a rien à faire sur une page qui annonce « ton adresse est confirmée » :
+   * l’utilisateur croit que c’est fini, et son mot de passe n’a pas changé.
+   *
+   * Supabase précise le type dans le fragment de l’URL. On le lit et on renvoie
+   * au bon endroit, EN CONSERVANT le fragment — c’est lui qui porte le jeton.
+   *
+   * L’aiguillage vit ici plutôt que dans l’application : une page se corrige en
+   * une minute, une application installée demande une nouvelle version.
+   */
+  (function () {
+    var frag = new URLSearchParams(location.hash.slice(1));
+    if (frag.get('type') === 'recovery' && frag.get('access_token')) {
+      location.replace('nouveau-mot-de-passe.html' + location.hash);
+    }
+  })();
+</script>
 </body>
 </html>
