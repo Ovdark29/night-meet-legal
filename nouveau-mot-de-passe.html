@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Night Meet — Nouveau mot de passe</title>
+<!--
+  Page de réinitialisation (2026-08-10).
+
+  POURQUOI UNE PAGE WEB ET PAS L'APP. Le lien reçu par email s'ouvre dans un
+  navigateur. Le renvoyer vers l'application via son schéma `nightmeet://`
+  fonctionne… quand le client mail l'autorise, ce qui n'est pas toujours le cas,
+  et jamais de façon prévisible. Une page web marche partout, du premier coup,
+  et c'est le seul critère qui compte pour quelqu'un qui a perdu son mot de passe.
+
+  COMMENT. Supabase place un jeton de session dans le FRAGMENT de l'URL (après le
+  #). Ce fragment n'est jamais transmis au serveur : il ne quitte pas le
+  navigateur, et n'apparaît donc dans aucun journal. On le lit en JavaScript et
+  on appelle l'API d'authentification avec, pour poser le nouveau mot de passe.
+
+  La clé publiable ci-dessous est faite pour être publique — c'est la même que
+  celle embarquée dans l'application. Elle n'autorise rien sans un jeton valide.
+-->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: #0a0a1a; color: #f0f0ff;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 28px;
+  }
+  .carte { width: 100%; max-width: 400px; text-align: center; }
+  .lune {
+    width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 24px;
+    background: radial-gradient(circle at 35% 35%, #e9d5ff, #a855f7);
+    box-shadow: 0 0 38px rgba(168,85,247,.42);
+  }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: 1.7rem; margin: 0 0 12px; line-height: 1.3; }
+  p { color: rgba(240,240,255,.8); font-size: .95rem; line-height: 1.6; margin: 0 0 20px; }
+  label { display: block; text-align: left; color: rgba(240,240,255,.66); font-size: .72rem;
+          font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 7px; }
+  input {
+    width: 100%; padding: 14px; margin-bottom: 16px; font-size: 1rem;
+    color: #f0f0ff; background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.18); border-radius: 14px;
+  }
+  input:focus { outline: none; border-color: rgba(168,85,247,.6); }
+  button {
+    width: 100%; padding: 15px; font-size: 1rem; font-weight: 700;
+    color: #fff; background: #a855f7; border: 0; border-radius: 14px; cursor: pointer;
+  }
+  button[disabled] { opacity: .45; cursor: default; }
+  .note { font-size: .82rem; color: rgba(240,240,255,.5); margin-top: 18px; }
+  .erreur { color: #fca5a5; font-size: .88rem; margin: 0 0 14px; min-height: 1.2em; }
+  .cache { display: none; }
+</style>
+</head>
+<body>
+  <div class="carte">
+    <div class="lune"></div>
+
+    <div id="formulaire">
+      <h1>Un nouveau mot de passe.</h1>
+      <p>Choisis-en un que tu n'utilises nulle part ailleurs.</p>
+      <p class="erreur" id="erreur"></p>
+
+      <label for="mdp1">Nouveau mot de passe</label>
+      <input id="mdp1" type="password" autocomplete="new-password" minlength="8">
+
+      <label for="mdp2">Confirme-le</label>
+      <input id="mdp2" type="password" autocomplete="new-password" minlength="8">
+
+      <button id="valider" disabled>Enregistrer</button>
+      <p class="note">Huit caractères minimum.</p>
+    </div>
+
+    <div id="fini" class="cache">
+      <h1>C'est fait.</h1>
+      <p>Tu peux fermer cette page et te connecter dans Night&nbsp;Meet avec ton nouveau mot de passe.</p>
+    </div>
+
+    <div id="perime" class="cache">
+      <h1>Ce lien n'est plus valable.</h1>
+      <p>Les liens de réinitialisation expirent au bout d'une heure, et ne servent qu'une fois.
+         Retourne dans l'application et redemande-en un.</p>
+    </div>
+  </div>
+
+<script>
+  var API = 'https://twrqfivxskieqluppxbc.supabase.co';
+  var CLE = 'sb_publishable_y6npieuufF6qzQEw084lMg_30mhCzjH';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var montrer = function (id) {
+    ['formulaire', 'fini', 'perime'].forEach(function (x) { $(x).className = x === id ? '' : 'cache'; });
+  };
+
+  // Le jeton vit dans le fragment (#access_token=…), jamais dans la requête.
+  var frag = new URLSearchParams(location.hash.slice(1));
+  var jeton = frag.get('access_token');
+
+  // Un lien déjà utilisé ou expiré arrive avec une erreur plutôt qu'un jeton.
+  if (!jeton) { montrer('perime'); }
+
+  var maj = function () {
+    var a = $('mdp1').value, b = $('mdp2').value;
+    $('valider').disabled = !(a.length >= 8 && a === b);
+  };
+  $('mdp1').addEventListener('input', maj);
+  $('mdp2').addEventListener('input', maj);
+
+  $('valider').addEventListener('click', function () {
+    var mdp = $('mdp1').value;
+    $('valider').disabled = true;
+    $('valider').textContent = 'Enregistrement…';
+    $('erreur').textContent = '';
+
+    fetch(API + '/auth/v1/user', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': CLE,
+        'Authorization': 'Bearer ' + jeton
+      },
+      body: JSON.stringify({ password: mdp })
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (res.ok) { montrer('fini'); return; }
+        // Message de Supabase, en anglais et technique : on garde le sens sans le jargon.
+        var m = (res.j && (res.j.msg || res.j.message || res.j.error_description)) || '';
+        if (/expired|invalid/i.test(m)) { montrer('perime'); return; }
+        $('erreur').textContent = /should be different/i.test(m)
+          ? 'Choisis un mot de passe différent de l’ancien.'
+          : 'Enregistrement impossible. Réessaie dans un instant.';
+        $('valider').disabled = false;
+        $('valider').textContent = 'Enregistrer';
+      })
+      .catch(function () {
+        $('erreur').textContent = 'Connexion impossible. Vérifie ton réseau.';
+        $('valider').disabled = false;
+        $('valider').textContent = 'Enregistrer';
+      });
+  });
+</script>
+</body>
+</html>
