@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <title>Night Meet — Nouveau mot de passe</title>
 <!--
-  Page de réinitialisation (2026-08-10).
+  Page de réinitialisation (2026-08-10, révisée le 2026-08-11).
 
   POURQUOI UNE PAGE WEB ET PAS L'APP. Le lien reçu par email s'ouvre dans un
   navigateur. Le renvoyer vers l'application via son schéma `nightmeet://`
@@ -18,6 +18,17 @@
   #). Ce fragment n'est jamais transmis au serveur : il ne quitte pas le
   navigateur, et n'apparaît donc dans aucun journal. On le lit en JavaScript et
   on appelle l'API d'authentification avec, pour poser le nouveau mot de passe.
+
+  🔧 2026-08-11 (retour Benjamin : « le bouton ne fonctionne pas »). Le bouton
+  était désactivé tant que les deux champs n'étaient pas remplis et identiques,
+  et cet état ne se recalculait que sur l'événement `input`. Le remplissage
+  automatique d'iOS — le trousseau qui propose un mot de passe fort — écrit dans
+  les champs sans toujours émettre cet événement : le bouton restait gris, sans
+  rien dire, et la page paraissait cassée.
+
+  Un bouton désactivé n'explique jamais pourquoi. Il est donc TOUJOURS actif, et
+  c'est le clic qui vérifie et qui répond. Même nombre de contrôles, mais chaque
+  refus dit ce qu'il attend.
 
   La clé publiable ci-dessous est faite pour être publique — c'est la même que
   celle embarquée dans l'application. Elle n'autorise rien sans un jeton valide.
@@ -40,17 +51,28 @@
   p { color: rgba(240,240,255,.8); font-size: .95rem; line-height: 1.6; margin: 0 0 20px; }
   label { display: block; text-align: left; color: rgba(240,240,255,.66); font-size: .72rem;
           font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 7px; }
+  .champ { position: relative; }
   input {
-    width: 100%; padding: 14px; margin-bottom: 16px; font-size: 1rem;
+    width: 100%; padding: 14px 50px 14px 14px; margin-bottom: 16px; font-size: 1rem;
     color: #f0f0ff; background: rgba(255,255,255,.08);
     border: 1px solid rgba(255,255,255,.18); border-radius: 14px;
   }
   input:focus { outline: none; border-color: rgba(168,85,247,.6); }
+  /* L'œil : même geste que sur l'écran de connexion de l'app. Sans lui, on tape
+     deux fois à l'aveugle un mot de passe qu'on vient d'inventer. */
+  .oeil {
+    position: absolute; top: 0; right: 0; width: 48px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: 0; padding: 0; cursor: pointer;
+    color: rgba(240,240,255,.55);
+  }
+  .oeil:hover { color: rgba(240,240,255,.85); }
+  .oeil svg { width: 20px; height: 20px; }
   button {
     width: 100%; padding: 15px; font-size: 1rem; font-weight: 700;
     color: #fff; background: #a855f7; border: 0; border-radius: 14px; cursor: pointer;
   }
-  button[disabled] { opacity: .45; cursor: default; }
+  button[disabled] { opacity: .55; cursor: default; }
   .note { font-size: .82rem; color: rgba(240,240,255,.5); margin-top: 18px; }
   .erreur { color: #fca5a5; font-size: .88rem; margin: 0 0 14px; min-height: 1.2em; }
   .cache { display: none; }
@@ -66,12 +88,18 @@
       <p class="erreur" id="erreur"></p>
 
       <label for="mdp1">Nouveau mot de passe</label>
-      <input id="mdp1" type="password" autocomplete="new-password" minlength="8">
+      <div class="champ">
+        <input id="mdp1" type="password" autocomplete="new-password" minlength="8">
+        <button type="button" class="oeil" data-cible="mdp1" aria-label="Afficher le mot de passe"></button>
+      </div>
 
       <label for="mdp2">Confirme-le</label>
-      <input id="mdp2" type="password" autocomplete="new-password" minlength="8">
+      <div class="champ">
+        <input id="mdp2" type="password" autocomplete="new-password" minlength="8">
+        <button type="button" class="oeil" data-cible="mdp2" aria-label="Afficher le mot de passe"></button>
+      </div>
 
-      <button id="valider" disabled>Enregistrer</button>
+      <button id="valider">Enregistrer</button>
       <p class="note">Huit caractères minimum.</p>
     </div>
 
@@ -95,6 +123,25 @@
   var montrer = function (id) {
     ['formulaire', 'fini', 'perime'].forEach(function (x) { $(x).className = x === id ? '' : 'cache'; });
   };
+  var dire = function (msg) { $('erreur').textContent = msg || ''; };
+
+  // ── L'œil ────────────────────────────────────────────────────────────────
+  // Deux tracés SVG plutôt qu'une police d'icônes : aucune ressource externe à
+  // charger, et la page doit s'afficher instantanément sur un réseau faible.
+  var OEIL_OUVERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var OEIL_BARRE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+  Array.prototype.forEach.call(document.querySelectorAll('.oeil'), function (b) {
+    b.innerHTML = OEIL_OUVERT;
+    b.addEventListener('click', function () {
+      var champ = $(b.getAttribute('data-cible'));
+      var visible = champ.type === 'text';
+      champ.type = visible ? 'password' : 'text';
+      b.innerHTML = visible ? OEIL_OUVERT : OEIL_BARRE;
+      b.setAttribute('aria-label', visible ? 'Afficher le mot de passe' : 'Masquer le mot de passe');
+      champ.focus();
+    });
+  });
 
   // Le jeton vit dans le fragment (#access_token=…), jamais dans la requête.
   var frag = new URLSearchParams(location.hash.slice(1));
@@ -103,18 +150,24 @@
   // Un lien déjà utilisé ou expiré arrive avec une erreur plutôt qu'un jeton.
   if (!jeton) { montrer('perime'); }
 
-  var maj = function () {
-    var a = $('mdp1').value, b = $('mdp2').value;
-    $('valider').disabled = !(a.length >= 8 && a === b);
-  };
-  $('mdp1').addEventListener('input', maj);
-  $('mdp2').addEventListener('input', maj);
-
   $('valider').addEventListener('click', function () {
-    var mdp = $('mdp1').value;
+    var a = $('mdp1').value || '';
+    var b = $('mdp2').value || '';
+
+    // Les contrôles vivent ICI et non dans l'état du bouton : un refus qui
+    // s'explique vaut mieux qu'un bouton gris qui se tait.
+    if (a.length < 8) { return dire('Huit caractères minimum.'); }
+    if (a !== b)      { return dire('Les deux saisies ne sont pas identiques.'); }
+
+    dire('');
     $('valider').disabled = true;
     $('valider').textContent = 'Enregistrement…';
-    $('erreur').textContent = '';
+
+    var rendre = function (msg) {
+      dire(msg);
+      $('valider').disabled = false;
+      $('valider').textContent = 'Enregistrer';
+    };
 
     fetch(API + '/auth/v1/user', {
       method: 'PUT',
@@ -123,7 +176,7 @@
         'apikey': CLE,
         'Authorization': 'Bearer ' + jeton
       },
-      body: JSON.stringify({ password: mdp })
+      body: JSON.stringify({ password: a })
     })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
@@ -131,17 +184,11 @@
         // Message de Supabase, en anglais et technique : on garde le sens sans le jargon.
         var m = (res.j && (res.j.msg || res.j.message || res.j.error_description)) || '';
         if (/expired|invalid/i.test(m)) { montrer('perime'); return; }
-        $('erreur').textContent = /should be different/i.test(m)
-          ? 'Choisis un mot de passe différent de l’ancien.'
-          : 'Enregistrement impossible. Réessaie dans un instant.';
-        $('valider').disabled = false;
-        $('valider').textContent = 'Enregistrer';
+        if (/should be different/i.test(m)) { return rendre('Choisis un mot de passe différent de l’ancien.'); }
+        if (/weak|password/i.test(m))      { return rendre('Mot de passe refusé : ' + m); }
+        rendre('Enregistrement impossible. Réessaie dans un instant.');
       })
-      .catch(function () {
-        $('erreur').textContent = 'Connexion impossible. Vérifie ton réseau.';
-        $('valider').disabled = false;
-        $('valider').textContent = 'Enregistrer';
-      });
+      .catch(function () { rendre('Connexion impossible. Vérifie ton réseau.'); });
   });
 </script>
 </body>
