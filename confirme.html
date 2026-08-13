@@ -6,6 +6,13 @@
 <meta name="robots" content="noindex">
 <title>Night Meet — Adresse confirmée</title>
 <!--
+  ⛔ CE FICHIER N'EST PAS UN MODÈLE D'E-MAIL. Ne jamais le coller dans
+     Supabase › Authentication › Emails : il ne contient AUCUN lien de
+     confirmation, et le mail perdrait son seul bouton utile — c'est arrivé le
+     2026-08-14, et plus personne ne pouvait confirmer son adresse.
+     • CE fichier-ci  → dépôt GitHub `night-meet-legal`, fichier confirme.html
+     • Le MODÈLE d'e-mail → docs/email-confirmation.html
+
   Page d'arrivée du lien de confirmation d'inscription (2026-08-10).
 
   POURQUOI ELLE EXISTE. Le lien envoyé par email doit bien mener quelque part.
@@ -36,14 +43,67 @@
   p { color: rgba(240,240,255,.82); font-size: 1rem; line-height: 1.6; margin: 0 0 14px; }
   .discret { color: rgba(240,240,255,.5); font-size: .85rem; margin-top: 30px; }
   a { color: #c4b5fd; }
+  .bouton {
+    display: inline-block; margin: 22px 0 12px;
+    background: #a855f7; color: #fff; text-decoration: none;
+    font-size: 1rem; font-weight: 700; padding: 15px 34px; border-radius: 14px;
+  }
+  .repli { color: rgba(240,240,255,.5); font-size: .85rem; margin: 0; }
 </style>
 </head>
 <body>
-  <div class="carte">
+  <div class="carte" id="carte-ok">
     <div class="lune"></div>
     <h1>Ton adresse est confirmée.</h1>
-    <p>Tu peux fermer cette page et retourner dans Night&nbsp;Meet pour te connecter.</p>
+    <!--
+      🔧 2026-08-13 (demande Benjamin) — « il faut expliquer qu'il suffit de se
+      connecter ». L'ancienne page disait « retourne te connecter » et s'arrêtait
+      là : on ne savait pas s'il restait une étape, ni avec quoi se connecter. Le
+      réflexe, alors, est de refaire une inscription — qui échoue, l'adresse étant
+      déjà prise. On nomme donc les deux seules choses à savoir : c'est fini, et
+      c'est le même mot de passe.
+    -->
+    <p>Il n'y a rien d'autre à faire ici. Ouvre Night&nbsp;Meet et connecte-toi
+       avec <strong>cette adresse</strong> et le mot de passe que tu as choisi
+       à l'inscription.</p>
+
+    <a class="bouton" href="nightmeet://">Ouvrir Night Meet</a>
+    <p class="repli">Si rien ne se passe, ouvre l'application depuis ton écran
+       d'accueil&nbsp;: ton compte t'y attend.</p>
+
     <p class="discret">
+      Inutile de créer un second compte&nbsp;: celui-ci est prêt.<br>
+      Un souci&nbsp;? Écris-nous à <a href="mailto:b.chatel@coreai.support">b.chatel@coreai.support</a>.
+    </p>
+  </div>
+
+  <!--
+    ⚠️ 2026-08-14 — LA PAGE MENTAIT. Elle annonçait « ton adresse est confirmée »
+    de façon inconditionnelle, alors que Supabase redirige ICI MÊME quand la
+    confirmation ÉCHOUE : le motif arrive dans le fragment de l'URL
+    (#error=access_denied&error_code=otp_expired…). On lisait donc un succès,
+    puis la connexion refusait « adresse non confirmée », sans que rien ne
+    permette de faire le lien entre les deux.
+
+    Le cas n'a rien d'exceptionnel : les messageries et les antivirus
+    PRÉ-VISITENT les liens qu'ils reçoivent, ce qui consomme un jeton à usage
+    unique avant même que la personne ait cliqué. Le lien est alors « déjà
+    utilisé » au premier vrai clic.
+  -->
+  <div class="carte" id="carte-erreur" hidden>
+    <div class="lune" style="background: radial-gradient(circle at 35% 35%, #fecaca, #ef4444); box-shadow: 0 0 42px rgba(239,68,68,.4);"></div>
+    <h1>Ce lien n'est plus valide.</h1>
+    <p id="motif">Il a peut-être expiré, ou déjà été utilisé.</p>
+    <p>Ton compte existe bien&nbsp;: il attend seulement d'être confirmé.
+       Ouvre Night&nbsp;Meet, va sur l'écran de connexion et touche
+       <strong>« Mail de confirmation non reçu&nbsp;? »</strong> pour en recevoir un neuf.</p>
+
+    <a class="bouton" href="nightmeet://">Ouvrir Night Meet</a>
+    <p class="repli">Si rien ne se passe, ouvre l'application depuis ton écran d'accueil.</p>
+
+    <p class="discret">
+      Les messageries et antivirus visitent parfois les liens avant toi, ce qui
+      les consomme. Un nouveau mail règle la situation.<br>
       Un souci&nbsp;? Écris-nous à <a href="mailto:b.chatel@coreai.support">b.chatel@coreai.support</a>.
     </p>
   </div>
@@ -63,9 +123,35 @@
    */
   (function () {
     var frag = new URLSearchParams(location.hash.slice(1));
+    var cherche = new URLSearchParams(location.search);
+
     if (frag.get('type') === 'recovery' && frag.get('access_token')) {
       location.replace('nouveau-mot-de-passe.html' + location.hash);
+      return;
     }
+
+    /*
+     * 🔴 2026-08-14 — L'ÉCHEC A DROIT À SON ÉCRAN. Supabase place le motif dans
+     * le fragment (implicite) ou dans la requête (PKCE) : on regarde les deux.
+     * Sans ça, un lien périmé affichait « confirmée » et l'on cherchait ensuite
+     * pendant vingt minutes pourquoi la connexion refusait.
+     */
+    var err = frag.get('error') || cherche.get('error')
+           || frag.get('error_code') || cherche.get('error_code');
+    if (!err) return;
+
+    var code = frag.get('error_code') || cherche.get('error_code') || '';
+    var desc = frag.get('error_description') || cherche.get('error_description') || '';
+    var motif = /expired/i.test(code + desc)
+      ? 'Ce lien avait une durée de vie limitée, et elle est passée.'
+      : (/already|used/i.test(code + desc)
+          ? 'Ce lien avait déjà été utilisé — un lien de confirmation ne sert qu’une fois.'
+          : 'Il a peut-être expiré, ou déjà été utilisé.');
+
+    var elMotif = document.getElementById('motif');
+    if (elMotif) elMotif.textContent = motif;
+    document.getElementById('carte-ok').hidden = true;
+    document.getElementById('carte-erreur').hidden = false;
   })();
 </script>
 </body>
