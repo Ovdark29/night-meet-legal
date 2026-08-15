@@ -37,7 +37,10 @@
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   body {
-    margin: 0; min-height: 100vh; background: #0a0a1a; color: #f0f0ff;
+    margin: 0; min-height: 100vh; color: #f0f0ff;
+    /* La lueur reprend le haut de l'icône (#181334) : le fond de la page
+       monte à sa rencontre, au lieu de la laisser en relief. */
+    background: #0a0a1a radial-gradient(60% 42% at 50% 16%, #191338 0%, #12102a 38%, #0a0a1a 72%);
     font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     display: flex; align-items: center; justify-content: center; padding: 28px;
   }
@@ -45,6 +48,9 @@
   .lune {
     width: 88px; height: 88px; border-radius: 20px; display: block;
     margin: 0 auto 24px;
+    /* L'ombre dissout le bord du carré ; sans elle il reste net, quelle
+       que soit la justesse du fond. */
+    box-shadow: 0 14px 46px rgba(124,58,237,0.34);
   }
   h1 { font-family: Georgia, "Times New Roman", serif; font-size: 1.7rem; margin: 0 0 12px; line-height: 1.3; }
   p { color: rgba(240,240,255,.8); font-size: .95rem; line-height: 1.6; margin: 0 0 20px; }
